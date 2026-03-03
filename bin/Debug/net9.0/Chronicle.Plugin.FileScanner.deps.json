@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v9.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v9.0": {
+      "Chronicle.Plugin.FileScanner/1.0.0": {
+        "dependencies": {
+          "Chronicle.Plugins": "1.0.0"
+        },
+        "runtime": {
+          "Chronicle.Plugin.FileScanner.dll": {}
+        }
+      },
+      "Chronicle.Core/1.0.0": {
+        "runtime": {
+          "Chronicle.Core.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Chronicle.Plugin.FileScanner/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Chronicle.Core/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

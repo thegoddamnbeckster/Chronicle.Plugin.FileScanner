@@ -1,0 +1,16 @@
+W:\Scripts\Chronicle.Plugin.FileScanner\bin\Debug\net9.0\manifest.json
+W:\Scripts\Chronicle.Plugin.FileScanner\bin\Debug\net9.0\Chronicle.Plugin.FileScanner.deps.json
+W:\Scripts\Chronicle.Plugin.FileScanner\bin\Debug\net9.0\Chronicle.Plugin.FileScanner.dll
+W:\Scripts\Chronicle.Plugin.FileScanner\bin\Debug\net9.0\Chronicle.Plugin.FileScanner.pdb
+W:\Scripts\Chronicle.Plugin.FileScanner\bin\Debug\net9.0\Chronicle.Core.dll
+W:\Scripts\Chronicle.Plugin.FileScanner\bin\Debug\net9.0\Chronicle.Core.pdb
+W:\Scripts\Chronicle.Plugin.FileScanner\obj\Debug\net9.0\Chronicle.Plugin.FileScanner.csproj.AssemblyReference.cache
+W:\Scripts\Chronicle.Plugin.FileScanner\obj\Debug\net9.0\Chronicle.Plugin.FileScanner.GeneratedMSBuildEditorConfig.editorconfig
+W:\Scripts\Chronicle.Plugin.FileScanner\obj\Debug\net9.0\Chronicle.Plugin.FileScanner.AssemblyInfoInputs.cache
+W:\Scripts\Chronicle.Plugin.FileScanner\obj\Debug\net9.0\Chronicle.Plugin.FileScanner.AssemblyInfo.cs
+W:\Scripts\Chronicle.Plugin.FileScanner\obj\Debug\net9.0\Chronicle.Plugin.FileScanner.csproj.CoreCompileInputs.cache
+W:\Scripts\Chronicle.Plugin.FileScanner\obj\Debug\net9.0\Chronicl.2EA3ED1F.Up2Date
+W:\Scripts\Chronicle.Plugin.FileScanner\obj\Debug\net9.0\Chronicle.Plugin.FileScanner.dll
+W:\Scripts\Chronicle.Plugin.FileScanner\obj\Debug\net9.0\refint\Chronicle.Plugin.FileScanner.dll
+W:\Scripts\Chronicle.Plugin.FileScanner\obj\Debug\net9.0\Chronicle.Plugin.FileScanner.pdb
+W:\Scripts\Chronicle.Plugin.FileScanner\obj\Debug\net9.0\ref\Chronicle.Plugin.FileScanner.dll

@@ -1,0 +1,114 @@
+{
+  "version": 3,
+  "targets": {
+    "net9.0": {
+      "Chronicle.Core/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v9.0",
+        "compile": {
+          "bin/placeholder/Chronicle.Core.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/_._": {}
+        }
+      },
+      "Chronicle.Plugins/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v9.0",
+        "dependencies": {
+          "Chronicle.Core": "1.0.0"
+        },
+        "compile": {
+          "bin/placeholder/Chronicle.Plugins.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/_._": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Chronicle.Core/1.0.0": {
+      "type": "project",
+      "path": "../Chronicle/src/Chronicle.Core/Chronicle.Core.csproj",
+      "msbuildProject": "../Chronicle/src/Chronicle.Core/Chronicle.Core.csproj"
+    },
+    "Chronicle.Plugins/1.0.0": {
+      "type": "project",
+      "path": "../Chronicle/src/Chronicle.Plugins/Chronicle.Plugins.csproj",
+      "msbuildProject": "../Chronicle/src/Chronicle.Plugins/Chronicle.Plugins.csproj"
+    }
+  },
+  "projectFileDependencyGroups": {
+    "net9.0": [
+      "Chronicle.Plugins >= 1.0.0"
+    ]
+  },
+  "packageFolders": {
+    "C:\\Users\\mbeck\\.nuget\\packages\\": {}
+  },
+  "project": {
+    "version": "1.0.0",
+    "restore": {
+      "projectUniqueName": "W:\\Scripts\\Chronicle.Plugin.FileScanner\\Chronicle.Plugin.FileScanner.csproj",
+      "projectName": "Chronicle.Plugin.FileScanner",
+      "projectPath": "W:\\Scripts\\Chronicle.Plugin.FileScanner\\Chronicle.Plugin.FileScanner.csproj",
+      "packagesPath": "C:\\Users\\mbeck\\.nuget\\packages\\",
+      "outputPath": "W:\\Scripts\\Chronicle.Plugin.FileScanner\\obj\\",
+      "projectStyle": "PackageReference",
+      "configFilePaths": [
+        "C:\\Users\\mbeck\\AppData\\Roaming\\NuGet\\NuGet.Config"
+      ],
+      "originalTargetFrameworks": [
+        "net9.0"
+      ],
+      "sources": {
+        "https://api.nuget.org/v3/index.json": {}
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "projectReferences": {
+            "W:\\Scripts\\Chronicle\\src\\Chronicle.Plugins\\Chronicle.Plugins.csproj": {
+              "projectPath": "W:\\Scripts\\Chronicle\\src\\Chronicle.Plugins\\Chronicle.Plugins.csproj",
+              "excludeAssets": "runtime"
+            }
+          }
+        }
+      },
+      "warningProperties": {
+        "warnAsError": [
+          "NU1605"
+        ]
+      },
+      "restoreAuditProperties": {
+        "enableAudit": "true",
+        "auditLevel": "low",
+        "auditMode": "direct"
+      },
+      "SdkAnalysisLevel": "9.0.300"
+    },
+    "frameworks": {
+      "net9.0": {
+        "targetAlias": "net9.0",
+        "imports": [
+          "net461",
+          "net462",
+          "net47",
+          "net471",
+          "net472",
+          "net48",
+          "net481"
+        ],
+        "assetTargetFallback": true,
+        "warn": true,
+        "frameworkReferences": {
+          "Microsoft.NETCore.App": {
+            "privateAssets": "all"
+          }
+        },
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.311/PortableRuntimeIdentifierGraph.json"
+      }
+    }
+  }
+}
