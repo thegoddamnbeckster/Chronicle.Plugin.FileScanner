@@ -49,7 +49,7 @@ internal static class FileNameParser
         // TV detection: S01E01 in filename, or "Season N" directory
         var mediaTypeHint = IsTv(filePath) ? "tv" : "movies";
 
-        // Pattern 1: "Title (Year)"
+        // Pattern 1: "Title (Year)" — standard Radarr/Sonarr naming, highly reliable
         var m = TitleYearParens.Match(stem);
         if (m.Success)
         {
@@ -58,7 +58,7 @@ internal static class FileNameParser
                 FilePath        = filePath,
                 ParsedTitle     = CleanTitle(m.Groups[1].Value),
                 ParsedYear      = int.Parse(m.Groups[2].Value),
-                ConfidenceScore = 75,
+                ConfidenceScore = 85,
                 MediaTypeHint   = mediaTypeHint,
             };
         }
@@ -72,7 +72,7 @@ internal static class FileNameParser
                 FilePath        = filePath,
                 ParsedTitle     = CleanTitle(m.Groups[1].Value),
                 ParsedYear      = int.Parse(m.Groups[2].Value),
-                ConfidenceScore = 65,
+                ConfidenceScore = 70,
                 MediaTypeHint   = mediaTypeHint,
             };
         }
@@ -83,7 +83,7 @@ internal static class FileNameParser
             FilePath        = filePath,
             ParsedTitle     = CleanTitle(stem),
             ParsedYear      = null,
-            ConfidenceScore = 45,
+            ConfidenceScore = 50,
             MediaTypeHint   = mediaTypeHint,
         };
     }
