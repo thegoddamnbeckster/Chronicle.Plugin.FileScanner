@@ -4,19 +4,23 @@ using Chronicle.Plugins.Models;
 namespace Chronicle.Plugin.FileScanner;
 
 /// <summary>
-/// Parses media file names into title, year, and media type hint.
+/// Parses media file names into structured metadata including TV hierarchy fields.
 /// All methods are static and allocation-minimal.
 /// </summary>
 internal static class FileNameParser
 {
-    // ── Supported video extensions ────────────────────────────────────────────
+    // ── Supported extensions ──────────────────────────────────────────────────
     private static readonly HashSet<string> VideoExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".mkv", ".mp4", ".avi", ".m4v", ".mov", ".wmv", ".mpg", ".mpeg"
     };
 
-    // ── Filename patterns (most specific → least specific) ────────────────────
+    private static readonly HashSet<string> AudioExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".mp3", ".flac", ".ogg", ".m4a", ".aac", ".wma", ".opus", ".wav", ".ape"
+    };
 
+    // ── Movie filename patterns ───────────────────────────────────────────────
     /// "Movie Title (2023)" or "Movie Title (2023) [extras]"
     private static readonly Regex TitleYearParens =
         new(@"^(.+?)\s*\((\d{4})\)", RegexOptions.Compiled);
@@ -25,78 +29,164 @@ internal static class FileNameParser
     private static readonly Regex TitleYearSpaced =
         new(@"^(.+?)[\.\s](\d{4})(?:[\.\s]|$)", RegexOptions.Compiled);
 
-    /// TV episode detection: S01E01, s01e01, 1x01
-    private static readonly Regex TvEpisodeCode =
-        new(@"[Ss]\d{1,2}[Ee]\d{1,2}|^\d{1,2}[xX]\d{2}", RegexOptions.Compiled);
+    // ── TV episode patterns ───────────────────────────────────────────────────
+    /// Matches: S01E02, S1E2, s01e02 — groups: 1=show title, 2=season, 3=episode, 4=episode title (optional)
+    private static readonly Regex SxxExx =
+        new(@"^(.*?)[. _\-][Ss](\d{1,2})[Ee](\d{1,2})(?:[. _\-](.+?))?(?:\.\w+)?$",
+            RegexOptions.Compiled);
+
+    /// Matches: 1x02, 01x02 — groups: 1=show title, 2=season, 3=episode, 4=episode title (optional)
+    private static readonly Regex NxNN =
+        new(@"^(.*?)[. _](\d{1,2})[xX](\d{2})(?:[. _](.+?))?(?:\.\w+)?$",
+            RegexOptions.Compiled);
 
     // ── Public API ────────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Returns true if the file extension is a recognised video format.
-    /// </summary>
+    /// <summary>Returns true if the file extension is a recognised video format.</summary>
     public static bool IsVideoFile(string filePath) =>
         VideoExtensions.Contains(Path.GetExtension(filePath));
 
+    /// <summary>Returns true if the file extension is a recognised audio format.</summary>
+    public static bool IsAudioFile(string filePath) =>
+        AudioExtensions.Contains(Path.GetExtension(filePath));
+
     /// <summary>
-    /// Parses <paramref name="filePath"/> and returns a <see cref="ScannedFile"/>
-    /// populated with the best title/year/confidence we can determine from the
-    /// filename and directory structure alone (no NFO lookup).
+    /// Parses a TV episode filename into show/season/episode fields.
+    /// Call this when the file is known to be a TV episode (media type = tv).
+    /// </summary>
+    public static ScannedFile ParseTv(string filePath)
+    {
+        var stem = Path.GetFileNameWithoutExtension(filePath);
+
+        // Try SxxExx pattern first (most common: "Show Name S01E02 Episode Title")
+        var m = SxxExx.Match(stem);
+        if (m.Success)
+        {
+            var showTitle    = CleanTitle(m.Groups[1].Value);
+            var seasonNum    = int.Parse(m.Groups[2].Value);
+            var episodeNum   = int.Parse(m.Groups[3].Value);
+            var episodeTitle = m.Groups[4].Success && !string.IsNullOrWhiteSpace(m.Groups[4].Value)
+                               ? CleanTitle(m.Groups[4].Value)
+                               : null;
+
+            return new ScannedFile
+            {
+                FilePath        = filePath,
+                ParsedTitle     = episodeTitle ?? showTitle,
+                ParsedYear      = null,
+                ConfidenceScore = 90,
+                MediaTypeHint   = "tv",
+                ShowTitle       = showTitle,
+                SeasonNumber    = seasonNum,
+                EpisodeNumber   = episodeNum,
+                EpisodeTitle    = episodeTitle,
+            };
+        }
+
+        // Try NxNN pattern ("Show Name 1x02")
+        m = NxNN.Match(stem);
+        if (m.Success)
+        {
+            var showTitle  = CleanTitle(m.Groups[1].Value);
+            var seasonNum  = int.Parse(m.Groups[2].Value);
+            var episodeNum = int.Parse(m.Groups[3].Value);
+
+            return new ScannedFile
+            {
+                FilePath        = filePath,
+                ParsedTitle     = showTitle,
+                ParsedYear      = null,
+                ConfidenceScore = 75,
+                MediaTypeHint   = "tv",
+                ShowTitle       = showTitle,
+                SeasonNumber    = seasonNum,
+                EpisodeNumber   = episodeNum,
+            };
+        }
+
+        // Fallback: directory structure says TV but no episode code found
+        var fallbackTitle = CleanTitle(stem);
+        return new ScannedFile
+        {
+            FilePath        = filePath,
+            ParsedTitle     = fallbackTitle,
+            ParsedYear      = null,
+            ConfidenceScore = 50,
+            MediaTypeHint   = "tv",
+            ShowTitle       = fallbackTitle,
+        };
+    }
+
+    /// <summary>
+    /// Parses a movie or generic video filename.
+    /// Internally delegates to <see cref="ParseTv"/> when TV episode codes are detected.
     /// </summary>
     public static ScannedFile Parse(string filePath)
     {
         var stem = Path.GetFileNameWithoutExtension(filePath);
 
-        // TV detection: S01E01 in filename, or "Season N" directory
-        var mediaTypeHint = IsTv(filePath) ? "tv" : "movies";
+        // Delegate to ParseTv if episode code detected in filename or parent directory
+        if (IsTvFilename(stem) || IsTvDirectory(filePath))
+            return ParseTv(filePath);
 
         // Pattern 1: "Title (Year)" — standard Radarr/Sonarr naming, highly reliable
         var m = TitleYearParens.Match(stem);
         if (m.Success)
-        {
             return new ScannedFile
             {
                 FilePath        = filePath,
                 ParsedTitle     = CleanTitle(m.Groups[1].Value),
                 ParsedYear      = int.Parse(m.Groups[2].Value),
                 ConfidenceScore = 85,
-                MediaTypeHint   = mediaTypeHint,
+                MediaTypeHint   = "movies",
             };
-        }
 
         // Pattern 2: "Title.Year.Quality" or "Title Year extras"
         m = TitleYearSpaced.Match(stem);
         if (m.Success && IsReasonableYear(m.Groups[2].Value))
-        {
             return new ScannedFile
             {
                 FilePath        = filePath,
                 ParsedTitle     = CleanTitle(m.Groups[1].Value),
                 ParsedYear      = int.Parse(m.Groups[2].Value),
                 ConfidenceScore = 70,
-                MediaTypeHint   = mediaTypeHint,
+                MediaTypeHint   = "movies",
             };
-        }
 
         // Fallback: use entire stem as title
         return new ScannedFile
         {
             FilePath        = filePath,
             ParsedTitle     = CleanTitle(stem),
+            ConfidenceScore = 50,
+            MediaTypeHint   = "movies",
+        };
+    }
+
+    /// <summary>
+    /// Parses an audio filename (title from stem only — no year pattern applied).
+    /// Audio metadata (artist, album, track number) comes from <see cref="EmbeddedTagReader"/>.
+    /// </summary>
+    public static ScannedFile ParseAudio(string filePath)
+    {
+        var stem = Path.GetFileNameWithoutExtension(filePath);
+        return new ScannedFile
+        {
+            FilePath        = filePath,
+            ParsedTitle     = CleanTitle(stem),
             ParsedYear      = null,
             ConfidenceScore = 50,
-            MediaTypeHint   = mediaTypeHint,
+            MediaTypeHint   = "music",
         };
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private static bool IsTv(string filePath)
-    {
-        var stem = Path.GetFileNameWithoutExtension(filePath);
-        if (TvEpisodeCode.IsMatch(stem))
-            return true;
+    private static bool IsTvFilename(string stem) =>
+        SxxExx.IsMatch(stem) || NxNN.IsMatch(stem);
 
-        // Check parent directories for "Season N" or "Series N"
+    private static bool IsTvDirectory(string filePath)
+    {
         var dir = Path.GetDirectoryName(filePath) ?? string.Empty;
         return dir.Contains("Season", StringComparison.OrdinalIgnoreCase) ||
                dir.Contains("Series", StringComparison.OrdinalIgnoreCase);
@@ -107,7 +197,7 @@ internal static class FileNameParser
 
     /// <summary>
     /// Replaces dots and underscores with spaces (common in Usenet-style names),
-    /// then trims and collapses whitespace.
+    /// strips common quality/codec tags, then trims and collapses whitespace.
     /// </summary>
     private static string CleanTitle(string raw)
     {
