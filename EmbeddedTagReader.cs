@@ -9,7 +9,7 @@ namespace Chronicle.Plugin.FileScanner;
 /// </summary>
 internal static class EmbeddedTagReader
 {
-    public readonly struct EmbeddedTags
+    internal readonly struct EmbeddedTags
     {
         public string?  AudioArtist       { get; init; }
         public string?  AudioAlbumArtist  { get; init; }
@@ -19,6 +19,9 @@ internal static class EmbeddedTagReader
         public int?     AudioYear         { get; init; }
         public string?  AudioGenre        { get; init; }
         public string?  ContainerTitle    { get; init; }
+        // Note: TagLib# exposes a single unified Year field; ContainerYear cannot be
+        // independently determined from AudioYear when using TagLib#. Populated by
+        // callers that have access to a separate container metadata source.
         public int?     ContainerYear     { get; init; }
         public string?  ContainerDesc     { get; init; }
         public int?     DurationSeconds   { get; init; }
@@ -43,11 +46,17 @@ internal static class EmbeddedTagReader
                 AudioYear        = tag.Year  > 0 ? (int?)tag.Year  : null,
                 AudioGenre       = NullIfEmpty(tag.FirstGenre),
                 ContainerTitle   = NullIfEmpty(tag.Title),
-                ContainerYear    = tag.Year  > 0 ? (int?)tag.Year  : null,
+                ContainerYear    = null, // TagLib# has a unified Year; set by caller if available
                 ContainerDesc    = NullIfEmpty(tag.Description),
-                DurationSeconds  = prop is not null ? (int)prop.Duration.TotalSeconds : null,
+                DurationSeconds  = prop is not null && prop.Duration.TotalSeconds > 0
+                                       ? (int)prop.Duration.TotalSeconds
+                                       : null,
                 FileSizeBytes    = new FileInfo(filePath).Length,
             };
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch
         {
