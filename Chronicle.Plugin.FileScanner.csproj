@@ -16,6 +16,7 @@
     <ProjectReference Include="..\Chronicle\src\Chronicle.Plugins\Chronicle.Plugins.csproj"
                       Private="false"
                       ExcludeAssets="runtime" />
+    <PackageReference Include="TagLibSharp" Version="2.3.0" />
   </ItemGroup>
 
   <!-- Copy manifest.json to output directory so PluginHostService can read it -->
