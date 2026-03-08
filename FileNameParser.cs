@@ -32,12 +32,12 @@ internal static class FileNameParser
     // ── TV episode patterns ───────────────────────────────────────────────────
     /// Matches: S01E02, S1E2, s01e02 — groups: 1=show title, 2=season, 3=episode, 4=episode title (optional)
     private static readonly Regex SxxExx =
-        new(@"^(.*?)[. _\-][Ss](\d{1,2})[Ee](\d{1,2})(?:[. _\-](.+?))?(?:\.\w+)?$",
+        new(@"^(.*?)[. _\-][Ss](\d{1,2})[Ee](\d{1,2})(?:[. _\-](.+?))?$",
             RegexOptions.Compiled);
 
     /// Matches: 1x02, 01x02 — groups: 1=show title, 2=season, 3=episode, 4=episode title (optional)
     private static readonly Regex NxNN =
-        new(@"^(.*?)[. _](\d{1,2})[xX](\d{2})(?:[. _](.+?))?(?:\.\w+)?$",
+        new(@"^(.*?)[. _](\d{1,2})[xX](\d{2})(?:[. _](.+?))?$",
             RegexOptions.Compiled);
 
     // ── Public API ────────────────────────────────────────────────────────────
@@ -76,7 +76,7 @@ internal static class FileNameParser
                 ParsedYear      = null,
                 ConfidenceScore = 90,
                 MediaTypeHint   = "tv",
-                ShowTitle       = showTitle,
+                ShowTitle       = string.IsNullOrWhiteSpace(showTitle) ? null : showTitle,
                 SeasonNumber    = seasonNum,
                 EpisodeNumber   = episodeNum,
                 EpisodeTitle    = episodeTitle,
@@ -87,20 +87,24 @@ internal static class FileNameParser
         m = NxNN.Match(stem);
         if (m.Success)
         {
-            var showTitle  = CleanTitle(m.Groups[1].Value);
-            var seasonNum  = int.Parse(m.Groups[2].Value);
-            var episodeNum = int.Parse(m.Groups[3].Value);
+            var showTitle    = CleanTitle(m.Groups[1].Value);
+            var seasonNum    = int.Parse(m.Groups[2].Value);
+            var episodeNum   = int.Parse(m.Groups[3].Value);
+            var episodeTitle = m.Groups[4].Success && !string.IsNullOrWhiteSpace(m.Groups[4].Value)
+                               ? CleanTitle(m.Groups[4].Value)
+                               : null;
 
             return new ScannedFile
             {
                 FilePath        = filePath,
-                ParsedTitle     = showTitle,
+                ParsedTitle     = episodeTitle ?? showTitle,
                 ParsedYear      = null,
                 ConfidenceScore = 75,
                 MediaTypeHint   = "tv",
-                ShowTitle       = showTitle,
+                ShowTitle       = string.IsNullOrWhiteSpace(showTitle) ? null : showTitle,
                 SeasonNumber    = seasonNum,
                 EpisodeNumber   = episodeNum,
+                EpisodeTitle    = episodeTitle,
             };
         }
 

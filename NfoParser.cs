@@ -86,7 +86,7 @@ internal static class NfoParser
             return new ScannedFile
             {
                 FilePath            = mediaFilePath,
-                ParsedTitle         = title ?? Path.GetFileNameWithoutExtension(mediaFilePath),
+                ParsedTitle         = title!,  // null when <title> absent — caller preserves filename-parsed title
                 ParsedYear          = year,
                 ConfidenceScore     = confidence,
                 SuggestedExternalId = externalId,

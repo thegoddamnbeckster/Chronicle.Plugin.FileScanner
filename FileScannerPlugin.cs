@@ -75,7 +75,8 @@ public sealed class FileScannerPlugin : IFileScannerPlugin
             var nfo = NfoParser.TryParse(file);
             if (nfo is not null)
             {
-                scanned.ParsedTitle         = nfo.ParsedTitle;
+                if (nfo.ParsedTitle is not null)
+                    scanned.ParsedTitle = nfo.ParsedTitle;
                 scanned.ParsedYear          = nfo.ParsedYear ?? scanned.ParsedYear;
                 scanned.SuggestedExternalId = nfo.SuggestedExternalId ?? scanned.SuggestedExternalId;
                 scanned.NfoPosterUrl        = nfo.NfoPosterUrl ?? scanned.NfoPosterUrl;
