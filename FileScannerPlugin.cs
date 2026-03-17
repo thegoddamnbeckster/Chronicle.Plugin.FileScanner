@@ -18,6 +18,12 @@ public sealed class FileScannerPlugin : IFileScannerPlugin
     public string Author      => "Chronicle";
     public string Description => "Scans local directories for media files. Reads embedded tags (ID3, Vorbis, MP4, MKV) and parses TV episode structure from filenames.";
 
+    // ── Configurable state ────────────────────────────────────────────────────
+
+    private int _confidenceThreshold = 80;
+
+    public int ConfidenceThreshold => _confidenceThreshold;
+
     // ── Capabilities ──────────────────────────────────────────────────────────
 
     public MediaTypeSupport[] GetSupportedMediaTypes() =>
@@ -27,13 +33,32 @@ public sealed class FileScannerPlugin : IFileScannerPlugin
         new MediaTypeSupport { MediaTypeName = "music",  DefaultPriority = 1 },
     ];
 
-    public PluginSettingsSchema GetSettingsSchema() => new(); // no settings required
+    public PluginSettingsSchema GetSettingsSchema() => new()
+    {
+        Settings =
+        [
+            new SettingDefinition
+            {
+                Key          = "confidence_threshold",
+                Label        = "Confidence threshold",
+                Description  = "Minimum confidence score (0–100) a scan group must reach to be auto-imported by the scheduled scan. Groups below this score are visible in the manual scan UI but skipped by the background task.",
+                Type         = SettingType.Number,
+                Required     = false,
+                DefaultValue = "80",
+            },
+        ],
+    };
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     public void Configure(IReadOnlyDictionary<string, string> settings)
     {
-        // No configurable settings — confidence threshold lives in the scan request.
+        if (settings.TryGetValue("confidence_threshold", out var rawThreshold)
+            && int.TryParse(rawThreshold, out var parsedThreshold)
+            && parsedThreshold >= 0 && parsedThreshold <= 100)
+        {
+            _confidenceThreshold = parsedThreshold;
+        }
     }
 
     // ── Core operation ────────────────────────────────────────────────────────
