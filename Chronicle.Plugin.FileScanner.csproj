@@ -19,6 +19,15 @@
     <PackageReference Include="TagLibSharp" Version="2.3.0" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <InternalsVisibleTo>Chronicle.Plugin.FileScanner.Tests</InternalsVisibleTo>
+  </PropertyGroup>
+
+  <!-- Exclude the tests/ subdirectory from the plugin's own compilation -->
+  <ItemGroup>
+    <Compile Remove="tests/**" />
+  </ItemGroup>
+
   <!-- Copy manifest.json to output directory so PluginHostService can read it -->
   <ItemGroup>
     <None Include="manifest.json">

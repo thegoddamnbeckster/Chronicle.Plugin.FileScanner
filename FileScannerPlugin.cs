@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Chronicle.Plugins;
 using Chronicle.Plugins.Models;
 
@@ -14,15 +15,21 @@ public sealed class FileScannerPlugin : IFileScannerPlugin
 
     public string PluginId    => "chronicle.plugin.filescanner";
     public string Name        => "File Scanner";
-    public string Version     => "1.1.0";
+    public string Version     => "1.2.0";
     public string Author      => "Chronicle";
     public string Description => "Scans local directories for media files. Reads embedded tags (ID3, Vorbis, MP4, MKV) and parses TV episode structure from filenames.";
 
-    // ── Configurable state ────────────────────────────────────────────────────
+    // ── Per-media-type thresholds (populated by Configure) ────────────────────
 
-    private int _confidenceThreshold = 80;
+    private readonly Dictionary<string, int> _thresholds = new(StringComparer.OrdinalIgnoreCase);
 
-    public int ConfidenceThreshold => _confidenceThreshold;
+    public int ConfidenceThreshold => 75;
+
+    public int GetConfidenceThreshold(string mediaTypeName)
+    {
+        if (_thresholds.TryGetValue(mediaTypeName, out var t)) return t;
+        return ConfidenceThreshold;
+    }
 
     // ── Capabilities ──────────────────────────────────────────────────────────
 
@@ -33,44 +40,111 @@ public sealed class FileScannerPlugin : IFileScannerPlugin
         new MediaTypeSupport { MediaTypeName = "music",  DefaultPriority = 1 },
     ];
 
-    public PluginSettingsSchema GetSettingsSchema() => new()
+    public PluginSettingsSchema GetSettingsSchema()
     {
-        Settings =
-        [
-            new SettingDefinition
-            {
-                Key          = "confidence_threshold",
-                Label        = "Confidence threshold",
-                Description  = "Minimum confidence score (0–100) a scan group must reach to be auto-imported by the scheduled scan. Groups below this score are visible in the manual scan UI but skipped by the background task.",
-                Type         = SettingType.Number,
-                Required     = false,
-                DefaultValue = "80",
-            },
-        ],
+        return new PluginSettingsSchema
+        {
+            Settings = GetSupportedMediaTypes()
+                .Select(mt => new SettingDefinition
+                {
+                    Key          = $"confidence_threshold_{mt.MediaTypeName}",
+                    Label        = $"Confidence threshold — {FriendlyName(mt.MediaTypeName)} (0–100)",
+                    Description  = ConfidenceDescription(mt.MediaTypeName),
+                    Type         = SettingType.Number,
+                    Required     = false,
+                    DefaultValue = "75",
+                })
+                .ToList(),
+        };
+    }
+
+    private static string FriendlyName(string name) => name switch
+    {
+        "movies" => "Movies",
+        "tv"     => "TV Shows",
+        "music"  => "Music",
+        _        => System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(name),
     };
+
+    private static string ConfidenceDescription(string mediaTypeName)
+    {
+        const string header =
+            "Minimum confidence score (0–100) for a group to be auto-imported by the " +
+            "scheduled scan. Groups below this score appear on the manual Scan page but " +
+            "are skipped by background tasks.\n\n";
+
+        return mediaTypeName switch
+        {
+            "movies" =>
+                header +
+                "How scores are assigned for Movies:\n" +
+                "• 100 — NFO sidecar has an external ID (e.g. tmdbid tag)\n" +
+                "• 90  — NFO sidecar has title + year\n" +
+                "• 78  — NFO sidecar has title only\n" +
+                "• 75  — Folder name includes a year, e.g. \"Interstellar (2014)\"\n" +
+                "• 55  — Folder name only — no year, no sidecar\n\n" +
+                "Recommended: 75 for year-named folders; lower to 55 to import everything; " +
+                "raise to 90+ to require NFO sidecars.",
+
+            "tv" =>
+                header +
+                "How scores are assigned for TV Shows (score is for the show root folder):\n" +
+                "• Base 55  — Folder name alone, e.g. \"Breaking Bad\"\n" +
+                "• +20      — Folder name includes a year, e.g. \"Breaking Bad (2008)\"\n" +
+                "• +20      — NFO sidecar in show folder has a show title\n" +
+                "• −15      — Audio tag artist name conflicts with folder name\n\n" +
+                "Typical results: folder+year = 75, folder+NFO = 75, folder+year+NFO = 95, " +
+                "folder only = 55.\n\n" +
+                "Recommended: 75 for year-named show folders; 55 to import everything.",
+
+            "music" =>
+                header +
+                "How scores are assigned for Music (score is for the artist root folder):\n" +
+                "• Base 55  — Folder name alone, e.g. \"Metallica\"\n" +
+                "• +20      — Embedded audio tags have an artist name\n" +
+                "• +20      — NFO sidecar has an artist name\n" +
+                "• +20      — Folder name includes a year, e.g. \"Metallica (1981)\"\n" +
+                "• −15      — Tag artist name conflicts with folder name\n\n" +
+                "Typical results: folder+tags = 75, folder+NFO = 75, folder+tags+year = 95, " +
+                "folder only = 55.\n\n" +
+                "Recommended: 75 requires at least one corroborating signal; 55 imports everything.",
+
+            _ =>
+                header +
+                "How scores are assigned:\n" +
+                "• 100 — NFO sidecar has an external ID\n" +
+                "• 75  — Folder name includes a year\n" +
+                "• 55  — Folder name only\n\n" +
+                "Recommended: 75 for year-named folders; 55 to import everything.",
+        };
+    }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     public void Configure(IReadOnlyDictionary<string, string> settings)
     {
-        if (settings.TryGetValue("confidence_threshold", out var rawThreshold)
-            && int.TryParse(rawThreshold, out var parsedThreshold)
-            && parsedThreshold >= 0 && parsedThreshold <= 100)
+        _thresholds.Clear();
+        foreach (var mt in GetSupportedMediaTypes())
         {
-            _confidenceThreshold = parsedThreshold;
+            var key = $"confidence_threshold_{mt.MediaTypeName}";
+            if (settings.TryGetValue(key, out var raw)
+                && int.TryParse(raw, out var parsed)
+                && parsed >= 0 && parsed <= 100)
+            {
+                _thresholds[mt.MediaTypeName] = parsed;
+            }
         }
     }
 
     // ── Core operation ────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Scans <paramref name="path"/> for video and audio files. For each file:
-    /// 1. Parses filename (TV-aware for video, audio-aware for audio files).
-    /// 2. Applies NFO sidecar overrides when available.
-    /// 3. Reads embedded tags via TagLib# (ID3, Vorbis, MP4, Matroska).
-    /// 4. Attaches local poster art if found alongside the file.
+    /// Scans <paramref name="path"/> for video and audio files using parallel I/O so that
+    /// network round-trips for NFO sidecar checks and tag reads can overlap.
+    /// A per-scan NFO directory cache avoids enumerating the same folder repeatedly when
+    /// many episode files share a season directory.
     /// </summary>
-    public Task<List<ScannedFile>> ScanDirectoryAsync(
+    public async Task<List<ScannedFile>> ScanDirectoryAsync(
         string path,
         bool recursive,
         CancellationToken ct = default)
@@ -79,64 +153,93 @@ public sealed class FileScannerPlugin : IFileScannerPlugin
             throw new DirectoryNotFoundException($"Scan path does not exist: {path}");
 
         var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-        var results = new List<ScannedFile>();
 
-        foreach (var file in Directory.EnumerateFiles(path, "*", searchOption))
+        IEnumerable<string> allFiles;
+        try
         {
-            ct.ThrowIfCancellationRequested();
-
-            var isVideo = FileNameParser.IsVideoFile(file);
-            var isAudio = FileNameParser.IsAudioFile(file);
-
-            if (!isVideo && !isAudio)
-                continue;
-
-            // 1. Filename parse
-            var scanned = isAudio
-                ? FileNameParser.ParseAudio(file)
-                : FileNameParser.Parse(file); // handles TV detection internally
-
-            // 2. NFO sidecar overrides (title, year, external ID, poster URL)
-            var nfo = NfoParser.TryParse(file);
-            if (nfo is not null)
-            {
-                if (nfo.ParsedTitle is not null)
-                    scanned.ParsedTitle = nfo.ParsedTitle;
-                scanned.ParsedYear          = nfo.ParsedYear ?? scanned.ParsedYear;
-                scanned.SuggestedExternalId = nfo.SuggestedExternalId ?? scanned.SuggestedExternalId;
-                scanned.NfoPosterUrl        = nfo.NfoPosterUrl ?? scanned.NfoPosterUrl;
-                scanned.ConfidenceScore     = nfo.ConfidenceScore;
-                scanned.MediaTypeHint       = nfo.MediaTypeHint;
-            }
-
-            // 3. Embedded tag reading
-            var tags = EmbeddedTagReader.Read(file);
-            scanned.AudioArtist          = tags.AudioArtist;
-            scanned.AudioAlbumArtist     = tags.AudioAlbumArtist;
-            scanned.AudioAlbum           = tags.AudioAlbum;
-            scanned.AudioTrackNumber     = tags.AudioTrackNumber;
-            scanned.AudioDiscNumber      = tags.AudioDiscNumber;
-            scanned.AudioYear            = tags.AudioYear;
-            scanned.AudioGenre           = tags.AudioGenre;
-            scanned.ContainerTitle     ??= tags.ContainerTitle;
-            scanned.ContainerYear      ??= tags.ContainerYear;
-            scanned.ContainerDescription ??= tags.ContainerDesc;
-            scanned.DurationSeconds      = tags.DurationSeconds;
-            scanned.FileSizeBytes        = tags.FileSizeBytes;
-
-            // 4. Local poster
-            scanned.LocalPosterPath ??= LocalArtFinder.FindPoster(file);
-
-            results.Add(scanned);
+            allFiles = Directory.EnumerateFiles(path, "*", searchOption)
+                .Where(f => FileNameParser.IsVideoFile(f) || FileNameParser.IsAudioFile(f))
+                .ToList(); // materialise before parallel to avoid lazy-eval cross-thread issues
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            throw new IOException($"Failed to enumerate files in '{path}': {ex.Message}", ex);
         }
 
-        return Task.FromResult(results);
+        // Per-scan cache: directory path → first .nfo found (or null if none).
+        // Avoids re-enumerating the same season folder for every episode file.
+        var nfoCache = new ConcurrentDictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+
+        var bag = new ConcurrentBag<ScannedFile>();
+
+        await Parallel.ForEachAsync(allFiles,
+            new ParallelOptions { MaxDegreeOfParallelism = 8, CancellationToken = ct },
+            (file, token) =>
+            {
+                token.ThrowIfCancellationRequested();
+
+                var isAudio = FileNameParser.IsAudioFile(file);
+
+                // 1. Filename parse
+                var scanned = isAudio
+                    ? FileNameParser.ParseAudio(file)
+                    : FileNameParser.Parse(file);
+
+                // 2. NFO sidecar overrides
+                var nfo = NfoParser.TryParse(file, nfoCache);
+                if (nfo is not null)
+                {
+                    if (nfo.ParsedTitle is not null)
+                        scanned.ParsedTitle = nfo.ParsedTitle;
+                    scanned.ParsedYear          = nfo.ParsedYear ?? scanned.ParsedYear;
+                    scanned.SuggestedExternalId = nfo.SuggestedExternalId ?? scanned.SuggestedExternalId;
+                    scanned.NfoPosterUrl        = nfo.NfoPosterUrl ?? scanned.NfoPosterUrl;
+                    scanned.ConfidenceScore     = nfo.ConfidenceScore;
+                    scanned.MediaTypeHint       = nfo.MediaTypeHint;
+                }
+
+                // 3. Embedded tag reading — audio only; video tags are not useful and
+                //    TagLib opening every MKV/MP4 over a network drive is very slow.
+                if (isAudio)
+                {
+                    var tags = EmbeddedTagReader.Read(file);
+                    scanned.AudioArtist          = tags.AudioArtist;
+                    scanned.AudioAlbumArtist     = tags.AudioAlbumArtist;
+                    scanned.AudioAlbum           = tags.AudioAlbum;
+                    scanned.AudioTrackNumber     = tags.AudioTrackNumber;
+                    scanned.AudioDiscNumber      = tags.AudioDiscNumber;
+                    scanned.AudioYear            = tags.AudioYear;
+                    scanned.AudioGenre           = tags.AudioGenre;
+                    scanned.ContainerTitle     ??= tags.ContainerTitle;
+                    scanned.ContainerYear      ??= tags.ContainerYear;
+                    scanned.ContainerDescription ??= tags.ContainerDesc;
+                    scanned.DurationSeconds      = tags.DurationSeconds;
+                    scanned.FileSizeBytes        = tags.FileSizeBytes;
+                }
+                else
+                {
+                    scanned.FileSizeBytes = GetFileSizeBytes(file);
+                }
+
+                // 4. Local poster
+                scanned.LocalPosterPath ??= LocalArtFinder.FindPoster(file);
+
+                bag.Add(scanned);
+                return ValueTask.CompletedTask;
+            });
+
+        return bag.ToList();
     }
 
-    /// <summary>
-    /// Health check always passes — this scanner only requires a valid path,
-    /// which is validated per-scan rather than globally.
-    /// </summary>
+    /// <summary>Health check always passes — path validity is checked per-scan.</summary>
     public Task<bool> HealthCheckAsync(CancellationToken ct = default) =>
         Task.FromResult(true);
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private static long? GetFileSizeBytes(string filePath)
+    {
+        try { return new FileInfo(filePath).Length; }
+        catch { return null; }
+    }
 }

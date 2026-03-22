@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Xml.Linq;
 using Chronicle.Plugins.Models;
 
@@ -14,9 +15,14 @@ internal static class NfoParser
     /// returns a <see cref="ScannedFile"/> enriched with NFO metadata.
     /// Returns <c>null</c> if no NFO file is found.
     /// </summary>
-    public static ScannedFile? TryParse(string mediaFilePath)
+    /// <param name="dirCache">
+    /// Optional per-scan cache mapping directory paths to the NFO found there.
+    /// Avoids re-enumerating the same season folder for every episode in it.
+    /// </param>
+    public static ScannedFile? TryParse(string mediaFilePath,
+        ConcurrentDictionary<string, string?>? dirCache = null)
     {
-        var nfoPath = FindNfo(mediaFilePath);
+        var nfoPath = FindNfo(mediaFilePath, dirCache);
         if (nfoPath is null)
             return null;
 
@@ -103,32 +109,45 @@ internal static class NfoParser
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private static string? FindNfo(string mediaFilePath)
+    private static string? FindNfo(string mediaFilePath,
+        ConcurrentDictionary<string, string?>? dirCache)
     {
         var dir  = Path.GetDirectoryName(mediaFilePath) ?? string.Empty;
         var stem = Path.GetFileNameWithoutExtension(mediaFilePath);
 
-        // Check <filename>.nfo first (highest priority for movies)
+        // Check <filename>.nfo first (highest priority for movies — always per-file)
         var sidecar = Path.Combine(dir, stem + ".nfo");
         if (File.Exists(sidecar))
             return sidecar;
 
-        // Check movie.nfo (common Kodi layout for movies)
+        // For the remaining lookups the result is the same for every file in the same
+        // directory, so cache it to avoid repeated File.Exists calls on network drives.
+        if (dirCache is not null)
+            return dirCache.GetOrAdd(dir, d => FindDirNfo(d));
+
+        return FindDirNfo(dir);
+    }
+
+    /// <summary>
+    /// Checks for shared NFO files in <paramref name="dir"/> and its parent.
+    /// Called at most once per directory when a cache is provided.
+    /// </summary>
+    private static string? FindDirNfo(string dir)
+    {
+        // movie.nfo — common Kodi layout for movies
         var movieNfo = Path.Combine(dir, "movie.nfo");
-        if (File.Exists(movieNfo))
-            return movieNfo;
+        if (File.Exists(movieNfo)) return movieNfo;
 
-        // Check tvshow.nfo in current or parent directory
+        // tvshow.nfo in current directory (season folder)
         var tvNfo = Path.Combine(dir, "tvshow.nfo");
-        if (File.Exists(tvNfo))
-            return tvNfo;
+        if (File.Exists(tvNfo)) return tvNfo;
 
+        // tvshow.nfo in parent directory (show root)
         var parentDir = Path.GetDirectoryName(dir);
         if (parentDir is not null)
         {
             var parentTvNfo = Path.Combine(parentDir, "tvshow.nfo");
-            if (File.Exists(parentTvNfo))
-                return parentTvNfo;
+            if (File.Exists(parentTvNfo)) return parentTvNfo;
         }
 
         return null;
