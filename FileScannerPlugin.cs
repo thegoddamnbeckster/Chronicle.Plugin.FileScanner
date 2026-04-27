@@ -35,9 +35,78 @@ public sealed class FileScannerPlugin : IFileScannerPlugin
 
     public MediaTypeSupport[] GetSupportedMediaTypes() =>
     [
-        new MediaTypeSupport { MediaTypeName = "movies", DefaultPriority = 1 },
-        new MediaTypeSupport { MediaTypeName = "tv",     DefaultPriority = 1 },
-        new MediaTypeSupport { MediaTypeName = "music",  DefaultPriority = 1 },
+        new MediaTypeSupport
+        {
+            MediaTypeName   = "movies",
+            DisplayName     = "Movies",
+            HierarchyLevels = 1,
+            DefaultPriority = 1,
+            SupportedFields = ["title", "overview", "year", "poster_url", "backdrop_url",
+                               "runtime_minutes", "genres", "cast", "directors", "rating", "tags"],
+        },
+        new MediaTypeSupport
+        {
+            MediaTypeName    = "tv",
+            DisplayName      = "TV",
+            HierarchyLevels  = 3,
+            HierarchyLabels  = ["Show", "Season", "Episode"],
+            DefaultPriority  = 1,
+            SupportedFields  = ["title", "overview", "year", "poster_url", "backdrop_url",
+                                "genres", "cast", "directors", "rating", "tags"],
+            LevelFields = new Dictionary<int, List<string>>
+            {
+                [1] = ["title", "overview", "year", "poster_url", "backdrop_url", "tags"],
+                [2] = ["title", "overview", "year", "runtime_minutes", "tags"],
+            },
+        },
+        new MediaTypeSupport
+        {
+            MediaTypeName    = "music",
+            DisplayName      = "Music",
+            HierarchyLevels  = 3,
+            HierarchyLabels  = ["Artist", "Album", "Track"],
+            InteractionVerb  = "listened",
+            DefaultPriority  = 1,
+            SupportedFields  = ["title", "overview", "poster_url", "genres", "rating", "tags"],
+            LevelFields = new Dictionary<int, List<string>>
+            {
+                [1] = ["title", "overview", "year", "poster_url", "genres", "rating", "tags"],
+                [2] = ["title", "year", "runtime_minutes", "tags"],
+            },
+        },
+        new MediaTypeSupport
+        {
+            MediaTypeName    = "anime",
+            DisplayName      = "Anime",
+            HierarchyLevels  = 3,
+            HierarchyLabels  = ["Show", "Season", "Episode"],
+            DefaultPriority  = 1,
+            SupportedFields  = ["title", "overview", "year", "poster_url", "backdrop_url",
+                                "genres", "cast", "directors", "rating", "tags"],
+            LevelFields = new Dictionary<int, List<string>>
+            {
+                [1] = ["title", "overview", "year", "poster_url", "backdrop_url", "tags"],
+                [2] = ["title", "overview", "year", "runtime_minutes", "tags"],
+            },
+        },
+        new MediaTypeSupport
+        {
+            MediaTypeName   = "fanedits",
+            DisplayName     = "Fan Edits",
+            HierarchyLevels = 1,
+            DefaultPriority = 1,
+            SupportedFields = ["title", "overview", "year", "poster_url", "backdrop_url",
+                               "runtime_minutes", "genres", "cast", "directors", "rating", "tags"],
+        },
+        new MediaTypeSupport
+        {
+            MediaTypeName   = "audiobooks",
+            DisplayName     = "Audiobooks",
+            HierarchyLevels = 1,
+            InteractionVerb = "listened",
+            DefaultPriority = 1,
+            SupportedFields = ["title", "overview", "year", "poster_url", "genres", "cast", "rating", "tags"],
+        },
     ];
 
     public PluginSettingsSchema GetSettingsSchema()
