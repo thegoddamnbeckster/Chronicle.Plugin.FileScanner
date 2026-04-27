@@ -18,6 +18,11 @@ internal static class EmbeddedTagReader
         public int?     AudioDiscNumber   { get; init; }
         public int?     AudioYear         { get; init; }
         public string?  AudioGenre        { get; init; }
+        /// <summary>
+        /// Grouping / series name. In iTunes/M4B this is the ©grp atom; in ID3 it is TIT1.
+        /// Audiobook managers typically store the series name here.
+        /// </summary>
+        public string?  AudioGrouping     { get; init; }
         public string?  ContainerTitle    { get; init; }
         // Note: TagLib# exposes a single unified Year field; ContainerYear cannot be
         // independently determined from AudioYear when using TagLib#. Populated by
@@ -45,6 +50,7 @@ internal static class EmbeddedTagReader
                 AudioDiscNumber  = tag.Disc  > 0 ? (int?)tag.Disc  : null,
                 AudioYear        = tag.Year  > 0 ? (int?)tag.Year  : null,
                 AudioGenre       = NullIfEmpty(tag.FirstGenre),
+                AudioGrouping    = NullIfEmpty(tag.Grouping),
                 ContainerTitle   = NullIfEmpty(tag.Title),
                 ContainerYear    = null, // TagLib# has a unified Year; set by caller if available
                 ContainerDesc    = NullIfEmpty(tag.Description),

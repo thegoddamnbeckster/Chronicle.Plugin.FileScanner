@@ -285,6 +285,7 @@ public sealed class FileScannerPlugin : IFileScannerPlugin
                     scanned.AudioDiscNumber      = tags.AudioDiscNumber;
                     scanned.AudioYear            = tags.AudioYear;
                     scanned.AudioGenre           = tags.AudioGenre;
+                    scanned.AudioGrouping        = tags.AudioGrouping;
                     scanned.ContainerTitle     ??= tags.ContainerTitle;
                     scanned.ContainerYear      ??= tags.ContainerYear;
                     scanned.ContainerDescription ??= tags.ContainerDesc;
