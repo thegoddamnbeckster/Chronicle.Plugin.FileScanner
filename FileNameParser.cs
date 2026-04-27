@@ -17,7 +17,7 @@ internal static class FileNameParser
 
     private static readonly HashSet<string> AudioExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".mp3", ".flac", ".ogg", ".m4a", ".aac", ".wma", ".opus", ".wav", ".ape"
+        ".mp3", ".flac", ".ogg", ".m4a", ".m4b", ".aac", ".wma", ".opus", ".wav", ".ape"
     };
 
     // ── Movie filename patterns ───────────────────────────────────────────────
