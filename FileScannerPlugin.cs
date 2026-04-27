@@ -168,15 +168,21 @@ public sealed class FileScannerPlugin : IFileScannerPlugin
 
             "music" =>
                 header +
-                "How scores are assigned for Music (score is for the artist root folder):\n" +
-                "• Base 55  — Folder name alone, e.g. \"Metallica\"\n" +
-                "• +20      — Embedded audio tags have an artist name\n" +
-                "• +20      — NFO sidecar has an artist name\n" +
-                "• +20      — Folder name includes a year, e.g. \"Metallica (1981)\"\n" +
-                "• −15      — Tag artist name conflicts with folder name\n\n" +
-                "Typical results: folder+tags = 75, folder+NFO = 75, folder+tags+year = 95, " +
-                "folder only = 55.\n\n" +
-                "Recommended: 75 requires at least one corroborating signal; 55 imports everything.",
+                "How scores are assigned for Music (score is per audio file):\n" +
+                "• 75  — File has both artist and album tags\n" +
+                "• 65  — File has artist or album tag (but not both)\n" +
+                "• 50  — File has no useful embedded tags\n\n" +
+                "Recommended: 75 imports only well-tagged files; lower to 65 to include " +
+                "partially-tagged files; lower to 50 to import everything.",
+
+            "audiobooks" =>
+                header +
+                "How scores are assigned for Audiobooks (score is per audio file):\n" +
+                "• 75  — File has both artist/author and album/title tags\n" +
+                "• 65  — File has artist or album tag (but not both)\n" +
+                "• 50  — File has no useful embedded tags\n\n" +
+                "Recommended: 75 imports only well-tagged files; lower to 65 to include " +
+                "partially-tagged files; lower to 50 to import everything.",
 
             _ =>
                 header +
@@ -284,6 +290,14 @@ public sealed class FileScannerPlugin : IFileScannerPlugin
                     scanned.ContainerDescription ??= tags.ContainerDesc;
                     scanned.DurationSeconds      = tags.DurationSeconds;
                     scanned.FileSizeBytes        = tags.FileSizeBytes;
+
+                    // Boost confidence from embedded tags: ParseAudio starts at 50 (below the
+                    // default 75 threshold). Tags proving the file is well-identified push it over.
+                    var hasArtist = !string.IsNullOrWhiteSpace(tags.AudioArtist)
+                                 || !string.IsNullOrWhiteSpace(tags.AudioAlbumArtist);
+                    var hasAlbum  = !string.IsNullOrWhiteSpace(tags.AudioAlbum);
+                    if (hasArtist && hasAlbum)      scanned.ConfidenceScore = 75; // well-tagged
+                    else if (hasArtist || hasAlbum) scanned.ConfidenceScore = 65; // partially tagged
                 }
                 else
                 {
