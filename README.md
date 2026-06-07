@@ -1,5 +1,7 @@
 # Chronicle.Plugin.FileScanner
 
+[![Latest Release](https://img.shields.io/github/v/release/thegoddamnbeckster/Chronicle.Plugin.FileScanner?label=Chronicle.Plugin.FileScanner&color=4f72c4)](https://github.com/thegoddamnbeckster/Chronicle.Plugin.FileScanner/releases/latest)
+
 File Scanner plugin for [Chronicle](https://github.com/thegoddamnbeckster/Chronicle).
 
 Scans local directories for media files, extracts metadata from NFO sidecar files and filenames, detects local poster art, and returns structured results for Chronicle to process.
