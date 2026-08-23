@@ -42,7 +42,7 @@ public sealed class FileScannerPlugin : IFileScannerPlugin
             HierarchyLevels = 1,
             DefaultPriority = 1,
             SupportedFields = ["title", "overview", "year", "poster_url", "backdrop_url",
-                               "runtime_minutes", "genres", "cast", "directors", "rating", "tags"],
+                               "runtime_minutes", "genres", "cast", "crew", "rating", "tags"],
         },
         new MediaTypeSupport
         {
@@ -52,7 +52,7 @@ public sealed class FileScannerPlugin : IFileScannerPlugin
             HierarchyLabels  = ["Show", "Season", "Episode"],
             DefaultPriority  = 1,
             SupportedFields  = ["title", "overview", "year", "poster_url", "backdrop_url",
-                                "genres", "cast", "directors", "rating", "tags"],
+                                "genres", "cast", "crew", "rating", "tags"],
             LevelFields = new Dictionary<int, List<string>>
             {
                 [1] = ["title", "overview", "year", "poster_url", "backdrop_url", "tags"],
@@ -74,6 +74,17 @@ public sealed class FileScannerPlugin : IFileScannerPlugin
                 [2] = ["title", "year", "runtime_minutes", "tags"],
             },
         },
+        // Standalone anime films — flat like "movies", not hierarchical like "anime" (real anime
+        // TV series). See Chronicle.Plugin.TMDB's anime_movies declaration for the full rationale.
+        new MediaTypeSupport
+        {
+            MediaTypeName   = "anime_movies",
+            DisplayName     = "Anime Movies",
+            HierarchyLevels = 1,
+            DefaultPriority = 1,
+            SupportedFields = ["title", "overview", "year", "poster_url", "backdrop_url",
+                               "runtime_minutes", "genres", "cast", "crew", "rating", "tags"],
+        },
         new MediaTypeSupport
         {
             MediaTypeName    = "anime",
@@ -82,7 +93,7 @@ public sealed class FileScannerPlugin : IFileScannerPlugin
             HierarchyLabels  = ["Show", "Season", "Episode"],
             DefaultPriority  = 1,
             SupportedFields  = ["title", "overview", "year", "poster_url", "backdrop_url",
-                                "genres", "cast", "directors", "rating", "tags"],
+                                "genres", "cast", "crew", "rating", "tags"],
             LevelFields = new Dictionary<int, List<string>>
             {
                 [1] = ["title", "overview", "year", "poster_url", "backdrop_url", "tags"],
@@ -96,7 +107,7 @@ public sealed class FileScannerPlugin : IFileScannerPlugin
             HierarchyLevels = 1,
             DefaultPriority = 1,
             SupportedFields = ["title", "overview", "year", "poster_url", "backdrop_url",
-                               "runtime_minutes", "genres", "cast", "directors", "rating", "tags"],
+                               "runtime_minutes", "genres", "cast", "crew", "rating", "tags"],
         },
         new MediaTypeSupport
         {

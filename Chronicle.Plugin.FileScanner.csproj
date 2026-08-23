@@ -19,9 +19,12 @@
     <PackageReference Include="TagLibSharp" Version="2.3.0" />
   </ItemGroup>
 
-  <PropertyGroup>
-    <InternalsVisibleTo>Chronicle.Plugin.FileScanner.Tests</InternalsVisibleTo>
-  </PropertyGroup>
+  <ItemGroup>
+    <!-- Bare-property form (InternalsVisibleTo as a PropertyGroup child) is not valid MSBuild
+         syntax for this and silently did nothing; only tests against this plugin's public API
+         had exercised it until now. This is the correct Item-based form. -->
+    <InternalsVisibleTo Include="Chronicle.Plugin.FileScanner.Tests" />
+  </ItemGroup>
 
   <!-- Exclude the tests/ subdirectory from the plugin's own compilation -->
   <ItemGroup>

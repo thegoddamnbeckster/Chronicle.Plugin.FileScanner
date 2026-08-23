@@ -189,11 +189,30 @@ internal static class FileNameParser
     private static bool IsTvFilename(string stem) =>
         SxxExx.IsMatch(stem) || NxNN.IsMatch(stem);
 
+    /// Matches a whole path segment that names a season folder: "Season 1", "Season 01",
+    /// "Series 3", "S01", "S1", or "Specials" (Kodi's season-0 folder name).
+    private static readonly Regex SeasonFolder =
+        new(@"^(season\s*\d{1,2}|series\s*\d{1,2}|s\d{1,2}|specials)$",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
     private static bool IsTvDirectory(string filePath)
     {
-        var dir = Path.GetDirectoryName(filePath) ?? string.Empty;
-        return dir.Contains("Season", StringComparison.OrdinalIgnoreCase) ||
-               dir.Contains("Series", StringComparison.OrdinalIgnoreCase);
+        // Walks every ancestor folder, not just the immediate parent -- a season folder is
+        // often not the file's direct parent (e.g. "Show/Season 01/1080p/episode.mkv", or any
+        // other quality/language subfolder one level under the season). A single-level check
+        // silently misclassified episodes like that as movies, since the immediate parent
+        // ("1080p") matches neither "Season" nor "Series".
+        var dir = Path.GetDirectoryName(filePath);
+        while (!string.IsNullOrEmpty(dir))
+        {
+            var name = Path.GetFileName(dir);
+            if (!string.IsNullOrEmpty(name) && SeasonFolder.IsMatch(name.Trim()))
+                return true;
+            var parent = Path.GetDirectoryName(dir);
+            if (parent == dir) break; // reached a drive root
+            dir = parent;
+        }
+        return false;
     }
 
     private static bool IsReasonableYear(string value) =>
