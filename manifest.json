@@ -1,7 +1,7 @@
 {
   "plugin_id": "chronicle.plugin.filescanner",
   "name": "File Scanner",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "author": "Chronicle",
   "description": "Scans local directories for media files and adds them to your library.",
   "min_chronicle_version": "1.0.0",
