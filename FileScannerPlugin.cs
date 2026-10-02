@@ -158,23 +158,17 @@ public sealed class FileScannerPlugin : IFileScannerPlugin
             "movies" =>
                 header +
                 "How scores are assigned for Movies:\n" +
-                "• 100 — NFO sidecar has an external ID (e.g. tmdbid tag)\n" +
-                "• 90  — NFO sidecar has title + year\n" +
-                "• 78  — NFO sidecar has title only\n" +
                 "• 75  — Folder name includes a year, e.g. \"Interstellar (2014)\"\n" +
-                "• 55  — Folder name only — no year, no sidecar\n\n" +
-                "Recommended: 75 for year-named folders; lower to 55 to import everything; " +
-                "raise to 90+ to require NFO sidecars.",
+                "• 55  — Folder name only — no year\n\n" +
+                "Recommended: 75 for year-named folders; lower to 55 to import everything.",
 
             "tv" =>
                 header +
                 "How scores are assigned for TV Shows (score is for the show root folder):\n" +
                 "• Base 55  — Folder name alone, e.g. \"Breaking Bad\"\n" +
                 "• +20      — Folder name includes a year, e.g. \"Breaking Bad (2008)\"\n" +
-                "• +20      — NFO sidecar in show folder has a show title\n" +
                 "• −15      — Audio tag artist name conflicts with folder name\n\n" +
-                "Typical results: folder+year = 75, folder+NFO = 75, folder+year+NFO = 95, " +
-                "folder only = 55.\n\n" +
+                "Typical results: folder+year = 75, folder only = 55.\n\n" +
                 "Recommended: 75 for year-named show folders; 55 to import everything.",
 
             "music" =>
@@ -198,7 +192,6 @@ public sealed class FileScannerPlugin : IFileScannerPlugin
             _ =>
                 header +
                 "How scores are assigned:\n" +
-                "• 100 — NFO sidecar has an external ID\n" +
                 "• 75  — Folder name includes a year\n" +
                 "• 55  — Folder name only\n\n" +
                 "Recommended: 75 for year-named folders; 55 to import everything.",
@@ -226,9 +219,7 @@ public sealed class FileScannerPlugin : IFileScannerPlugin
 
     /// <summary>
     /// Scans <paramref name="path"/> for video and audio files using parallel I/O so that
-    /// network round-trips for NFO sidecar checks and tag reads can overlap.
-    /// A per-scan NFO directory cache avoids enumerating the same folder repeatedly when
-    /// many episode files share a season directory.
+    /// network round-trips for tag reads can overlap.
     /// </summary>
     public async Task<List<ScannedFile>> ScanDirectoryAsync(
         string path,
@@ -252,10 +243,6 @@ public sealed class FileScannerPlugin : IFileScannerPlugin
             throw new IOException($"Failed to enumerate files in '{path}': {ex.Message}", ex);
         }
 
-        // Per-scan cache: directory path → first .nfo found (or null if none).
-        // Avoids re-enumerating the same season folder for every episode file.
-        var nfoCache = new ConcurrentDictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-
         var bag = new ConcurrentBag<ScannedFile>();
 
         await Parallel.ForEachAsync(allFiles,
@@ -271,20 +258,7 @@ public sealed class FileScannerPlugin : IFileScannerPlugin
                     ? FileNameParser.ParseAudio(file)
                     : FileNameParser.Parse(file);
 
-                // 2. NFO sidecar overrides
-                var nfo = NfoParser.TryParse(file, nfoCache);
-                if (nfo is not null)
-                {
-                    if (nfo.ParsedTitle is not null)
-                        scanned.ParsedTitle = nfo.ParsedTitle;
-                    scanned.ParsedYear          = nfo.ParsedYear ?? scanned.ParsedYear;
-                    scanned.SuggestedExternalId = nfo.SuggestedExternalId ?? scanned.SuggestedExternalId;
-                    scanned.NfoPosterUrl        = nfo.NfoPosterUrl ?? scanned.NfoPosterUrl;
-                    scanned.ConfidenceScore     = nfo.ConfidenceScore;
-                    scanned.MediaTypeHint       = nfo.MediaTypeHint;
-                }
-
-                // 3. Embedded tag reading — audio only; video tags are not useful and
+                // 2. Embedded tag reading — audio only; video tags are not useful and
                 //    TagLib opening every MKV/MP4 over a network drive is very slow.
                 if (isAudio)
                 {

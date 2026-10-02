@@ -163,7 +163,7 @@ public class FileScannerPluginTests
     public async Task ScanDirectoryAsync_VideoFilesDoNotPopulateAudioTags()
     {
         // Audio tag fields should be null for video files — TagLib is not called
-        // for video extensions; folder structure and NFO are the authoritative signals.
+        // for video extensions; folder structure and filenames are the authoritative signals.
         using var tmp = new TempDirectory();
         File.WriteAllBytes(Path.Combine(tmp.Path, "film.mkv"), []);
 
@@ -198,7 +198,7 @@ public class FileScannerPluginTests
     public async Task ScanDirectoryAsync_VideoFilesProduceNullAudioArtistAndAlbum()
     {
         // TagLib is not called for video extensions — audio tag fields must be null.
-        // Folder structure and NFO sidecars are the authoritative signal for video.
+        // Folder structure and filenames are the authoritative signal for video.
         using var tmp = new TempDirectory();
         File.WriteAllBytes(Path.Combine(tmp.Path, "film.mkv"), []);
         File.WriteAllBytes(Path.Combine(tmp.Path, "show.avi"), []);

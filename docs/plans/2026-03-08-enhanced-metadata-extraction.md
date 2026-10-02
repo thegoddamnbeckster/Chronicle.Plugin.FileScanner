@@ -8,7 +8,7 @@
 
 ## Background
 
-The FileScanner plugin currently only parses filenames and NFO sidecar files. It does not:
+The FileScanner plugin currently only parses filenames. It does not:
 
 - Extract season/episode numbers from TV filenames
 - Read embedded tags from audio files (ID3, Vorbis Comments, MP4 atoms)
@@ -201,10 +201,9 @@ For each file in directory:
      - Audio file  → FileNameParser.ParseAudio() (title from filename, no year pattern)
      - TV video    → FileNameParser.ParseTv()    (ShowTitle, SeasonNumber, EpisodeNumber)
      - Other video → FileNameParser.Parse()      (existing logic)
-  3. Try NFO sidecar — overrides ParsedTitle, ParsedYear, SuggestedExternalId if found
   4. Read embedded tags via EmbeddedTagReader.Read(filePath)
      Merge strategy (highest wins):
-       - NFO values override tags override filename for ParsedTitle/ParsedYear
+       - Tags override filename for ParsedTitle/ParsedYear
        - Audio tag fields (AudioArtist etc.) only come from EmbeddedTagReader
        - Container fields (ContainerTitle etc.) only come from EmbeddedTagReader
        - TV hierarchy fields (ShowTitle etc.) only come from filename parsing
@@ -222,16 +221,14 @@ For each file in directory:
 
 | Field | Source priority |
 |-------|----------------|
-| ParsedTitle | NFO title > EpisodeTitle > ContainerTitle > AudioArtist+" - "+AudioTitle > filename |
-| ParsedYear  | NFO year > ContainerYear > AudioYear > filename pattern |
+| ParsedTitle | EpisodeTitle > ContainerTitle > AudioArtist+" - "+AudioTitle > filename |
+| ParsedYear  | ContainerYear > AudioYear > filename pattern |
 | ShowTitle   | Filename regex only |
 | SeasonNumber / EpisodeNumber | Filename regex only |
 | Audio* fields | EmbeddedTagReader only |
 | Container* fields | EmbeddedTagReader only |
 | DurationSeconds / FileSizeBytes | EmbeddedTagReader (TagLib properties) |
-| SuggestedExternalId | NFO only |
 | LocalPosterPath | LocalArtFinder only |
-| NfoPosterUrl | NFO only |
 
 ---
 

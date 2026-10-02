@@ -4,7 +4,7 @@
 
 File Scanner plugin for [Chronicle](https://github.com/thegoddamnbeckster/Chronicle).
 
-Scans local directories for media files, extracts metadata from NFO sidecar files and filenames, detects local poster art, and returns structured results for Chronicle to process.
+Scans local directories for media files, extracts metadata from filenames and embedded tags, detects local poster art, and returns structured results for Chronicle to process.
 
 ---
 
@@ -12,8 +12,8 @@ Scans local directories for media files, extracts metadata from NFO sidecar file
 
 | Media Type | Detection Method |
 |------------|-----------------|
-| Movies     | Filename patterns, `movie.nfo`, `<filename>.nfo` |
-| TV Shows   | `S01E01` / `1x01` episode codes, `Season N` / `Series N` directory names, `tvshow.nfo` |
+| Movies     | Filename patterns |
+| TV Shows   | `S01E01` / `1x01` episode codes, `Season N` / `Series N` directory names |
 
 ---
 
@@ -36,40 +36,14 @@ Scans local directories for media files, extracts metadata from NFO sidecar file
 For each video file found, the scanner follows this priority chain:
 
 ```
-1. NFO sidecar found?  ──yes──▶  Parse NFO  ──▶  ScannedFile (confidence 70–100)
+1. Filename heuristics  ──▶  ScannedFile (confidence 50–85)
         │
-       no
         ▼
-2. Filename heuristics  ──▶  ScannedFile (confidence 50–85)
+2. Embedded tags (audio files)
         │
         ▼
 3. Attach local poster art if found alongside the file
 ```
-
----
-
-## NFO Sidecar Parsing
-
-The scanner looks for Kodi/Emby-style `.nfo` XML files in this order:
-
-| Location | Example |
-|----------|---------|
-| `<filename>.nfo` (same directory) | `Fight.Club.1999.mkv` → `Fight.Club.1999.nfo` |
-| `movie.nfo` (same directory) | `movie.nfo` |
-| `tvshow.nfo` (same or parent directory) | `tvshow.nfo` |
-
-### Extracted Fields
-
-| NFO Element | Description |
-|-------------|-------------|
-| `<title>` | Media title |
-| `<year>` | Release year |
-| `<uniqueid type="tmdb">` | TMDB ID → Chronicle external ID `movie:550` or `tv:1399` |
-| `<uniqueid type="imdb">` | IMDB ID → Chronicle external ID `imdb:tt0137523` |
-| `<id>` | Legacy Kodi IMDB ID format |
-| `<thumb>` / `<thumb aspect="poster">` | Remote poster URL |
-
-The root element name (`<movie>`, `<tvshow>`, `<episodedetails>`) determines the media type.
 
 ---
 
@@ -79,10 +53,7 @@ Chronicle uses confidence scores to decide whether to auto-import a file or surf
 
 | Source | Score | Notes |
 |--------|-------|-------|
-| NFO + TMDB/IMDB external ID | **100** | Unambiguous match — auto-importable |
-| NFO with title + year | **85** | High confidence, search will find it |
 | Filename `Title (Year).ext` | **85** | Standard Radarr/Sonarr naming |
-| NFO with title only | **70** | Metadata search needed |
 | Filename `Title.Year.Quality.ext` | **70** | Dotted/spaced release names |
 | Filename (no year found) | **50** | Title-only fallback — needs review |
 
@@ -202,18 +173,6 @@ This plugin references `Chronicle.Plugins` via a local path reference during dev
 
 ---
 
-## External ID Format
-
-When an NFO contains a TMDB ID, the scanner produces external IDs in Chronicle's native format:
-
-| NFO Content | Chronicle External ID |
-|-------------|----------------------|
-| `<uniqueid type="tmdb">550</uniqueid>` in a movie NFO | `movie:550` |
-| `<uniqueid type="tmdb">1399</uniqueid>` in a tvshow NFO | `tv:1399` |
-| `<uniqueid type="imdb">tt0137523</uniqueid>` | `imdb:tt0137523` |
-
----
-
 ## Repository Structure
 
 ```
@@ -221,7 +180,6 @@ Chronicle.Plugin.FileScanner/
 ├── Chronicle.Plugin.FileScanner.csproj
 ├── FileScannerPlugin.cs    # IFileScannerPlugin implementation — entry point
 ├── FileNameParser.cs       # Regex-based filename → title/year/confidence
-├── NfoParser.cs            # Kodi-style XML sidecar parser
 ├── LocalArtFinder.cs       # Poster/folder image discovery
 └── manifest.json           # Plugin identity and entry type
 ```
