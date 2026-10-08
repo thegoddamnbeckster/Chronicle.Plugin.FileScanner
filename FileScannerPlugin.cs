@@ -134,6 +134,19 @@ public sealed class FileScannerPlugin : IFileScannerPlugin
                     Required     = false,
                     DefaultValue = "75",
                 })
+                .Concat(
+                [
+                    new SettingDefinition
+                    {
+                        Key = ExtraVideoKey, Label = "Extra video file types", Type = SettingType.Text, Required = false,
+                        Description = "File types to treat as video in addition to the built-in ones, comma separated (for example: rmvb, vob).",
+                    },
+                    new SettingDefinition
+                    {
+                        Key = ExtraAudioKey, Label = "Extra audio file types", Type = SettingType.Text, Required = false,
+                        Description = "File types to treat as audio in addition to the built-in ones, comma separated (for example: dsf, dff).",
+                    },
+                ])
                 .ToList(),
         };
     }
@@ -200,8 +213,14 @@ public sealed class FileScannerPlugin : IFileScannerPlugin
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
+    private const string ExtraVideoKey = "extra_video_extensions";
+    private const string ExtraAudioKey = "extra_audio_extensions";
+
     public void Configure(IReadOnlyDictionary<string, string> settings)
     {
+        FileNameParser.SetExtraExtensions(
+            settings.TryGetValue(ExtraVideoKey, out var xv) ? xv : null,
+            settings.TryGetValue(ExtraAudioKey, out var xa) ? xa : null);
         _thresholds.Clear();
         foreach (var mt in GetSupportedMediaTypes())
         {

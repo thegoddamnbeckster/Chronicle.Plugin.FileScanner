@@ -72,3 +72,63 @@ public class ParseAudioTests
         Assert.Null(r.AudioTrackNumber);
     }
 }
+
+[Collection("ExtraExtensions")]   // the extra file types are process-wide
+public class ExtraFileTypeTests : IDisposable
+{
+    public ExtraFileTypeTests() => FileNameParser.SetExtraExtensions(null, null);
+    public void Dispose() => FileNameParser.SetExtraExtensions(null, null);
+
+    [Fact]
+    public void WithNothingConfigured_UnknownTypesAreNotMedia()
+    {
+        Assert.False(FileNameParser.IsVideoFile(@"C:\v\old.rmvb"));
+        Assert.False(FileNameParser.IsAudioFile(@"C:\m\song.dsf"));
+    }
+
+    [Fact]
+    public void UserTypes_AreRecognised_WithOrWithoutADot_AndKeepTheirKind()
+    {
+        FileNameParser.SetExtraExtensions("rmvb, .VOB", "dsf");
+
+        Assert.True(FileNameParser.IsVideoFile(@"C:\v\old.rmvb"));
+        Assert.True(FileNameParser.IsVideoFile(@"C:\v\old.vob"));
+        Assert.True(FileNameParser.IsAudioFile(@"C:\m\song.dsf"));
+        Assert.False(FileNameParser.IsVideoFile(@"C:\m\song.dsf"));
+        Assert.False(FileNameParser.IsAudioFile(@"C:\v\old.rmvb"));
+    }
+
+    [Theory]
+    [InlineData("../evil")]
+    [InlineData("a/b")]
+    [InlineData(".")]
+    public void NotAPlainExtension_IsIgnored(string junk)
+    {
+        FileNameParser.SetExtraExtensions(junk, junk);
+
+        Assert.False(FileNameParser.IsVideoFile(@"C:\v\evil"));
+    }
+
+    [Fact]
+    public void ConfigureAppliesThem_AndClearingTheSettingRemovesThem()
+    {
+        var plugin = new FileScannerPlugin();
+        plugin.Configure(new Dictionary<string, string> { ["extra_video_extensions"] = "rmvb" });
+        Assert.True(FileNameParser.IsVideoFile(@"C:\v\old.rmvb"));
+
+        plugin.Configure(new Dictionary<string, string>());
+        Assert.False(FileNameParser.IsVideoFile(@"C:\v\old.rmvb"));
+    }
+
+    [Fact]
+    public void TheSettingsAreOffered()
+    {
+        var keys = new FileScannerPlugin().GetSettingsSchema().Settings.Select(s => s.Key).ToList();
+
+        Assert.Contains("extra_video_extensions", keys);
+        Assert.Contains("extra_audio_extensions", keys);
+    }
+}
+
+[CollectionDefinition("ExtraExtensions", DisableParallelization = true)]
+public class ExtraExtensionsCollection;

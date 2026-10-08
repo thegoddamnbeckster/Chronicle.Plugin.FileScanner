@@ -20,6 +20,28 @@ internal static class FileNameParser
         ".mp3", ".flac", ".ogg", ".m4a", ".m4b", ".aac", ".wma", ".opus", ".wav", ".ape"
     };
 
+    // Extensions the user added in the plugin's settings (replaced as a whole on every Configure call).
+    private static volatile HashSet<string> _extraVideo = new(StringComparer.OrdinalIgnoreCase);
+    private static volatile HashSet<string> _extraAudio = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Sets the user's own file types: comma separated, a leading dot optional, plain extensions only.</summary>
+    internal static void SetExtraExtensions(string? video, string? audio)
+    {
+        _extraVideo = ParseExtensions(video);
+        _extraAudio = ParseExtensions(audio);
+    }
+
+    private static HashSet<string> ParseExtensions(string? raw)
+    {
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var part in (raw ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        {
+            var ext = part.StartsWith('.') ? part : "." + part;
+            if (ext.Length is > 1 and <= 12 && ext.Skip(1).All(char.IsLetterOrDigit)) set.Add(ext);
+        }
+        return set;
+    }
+
     // ── Movie filename patterns ───────────────────────────────────────────────
     /// "Movie Title (2023)" or "Movie Title (2023) [extras]"
     private static readonly Regex TitleYearParens =
@@ -44,11 +66,11 @@ internal static class FileNameParser
 
     /// <summary>Returns true if the file extension is a recognised video format.</summary>
     public static bool IsVideoFile(string filePath) =>
-        VideoExtensions.Contains(Path.GetExtension(filePath));
+        VideoExtensions.Contains(Path.GetExtension(filePath)) || _extraVideo.Contains(Path.GetExtension(filePath));
 
     /// <summary>Returns true if the file extension is a recognised audio format.</summary>
     public static bool IsAudioFile(string filePath) =>
-        AudioExtensions.Contains(Path.GetExtension(filePath));
+        AudioExtensions.Contains(Path.GetExtension(filePath)) || _extraAudio.Contains(Path.GetExtension(filePath));
 
     /// <summary>
     /// Parses a TV episode filename into show/season/episode fields.

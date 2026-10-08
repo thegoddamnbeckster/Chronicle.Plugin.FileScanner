@@ -19,8 +19,8 @@ public class FileScannerPluginTests
         var schema = plugin.GetSettingsSchema();
         var mediaTypes = plugin.GetSupportedMediaTypes().Select(m => m.MediaTypeName).ToList();
 
-        // One threshold setting per media type — not a single global setting
-        Assert.Equal(mediaTypes.Count, schema.Settings.Count);
+        // One threshold setting per media type — not a single global setting (the two extra-file-type settings are separate)
+        Assert.Equal(mediaTypes.Count, schema.Settings.Count(s => s.Key.StartsWith("confidence_threshold_")));
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public class FileScannerPluginTests
                 $"Setting '{setting.Key}' has no description");
 
         // The descriptions must differ between media types — not the same generic text
-        var descriptions = schema.Settings.Select(s => s.Description).Distinct().ToList();
+        var descriptions = schema.Settings.Where(s => s.Key.StartsWith("confidence_threshold_")).Select(s => s.Description).Distinct().ToList();
         Assert.True(descriptions.Count > 1,
             "All media-type threshold settings have identical descriptions; each should be tailored to the type.");
     }
@@ -60,7 +60,7 @@ public class FileScannerPluginTests
         var plugin = new FileScannerPlugin();
         var schema = plugin.GetSettingsSchema();
 
-        foreach (var setting in schema.Settings)
+        foreach (var setting in schema.Settings.Where(s => s.Key.StartsWith("confidence_threshold_")))
             Assert.Equal("75", setting.DefaultValue);
     }
 
