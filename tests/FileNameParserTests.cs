@@ -45,3 +45,30 @@ public class FileNameParserTests
         Assert.Equal("tv", result.MediaTypeHint);
     }
 }
+
+public class ParseAudioTests
+{
+    [Theory]
+    [InlineData(@"C:\Music\Artist\Album\01 - Enter Sandman.mp3", "Enter Sandman", 1, null)]
+    [InlineData(@"C:\Music\Artist\Album\1-02 Sad But True.flac", "Sad But True", 2, 1)]
+    [InlineData(@"C:\Music\Artist\Album\Track 05 - Holier Than Thou.mp3", "Holier Than Thou", 5, null)]
+    public void ParseAudio_ReadsTrackAndDiscOutOfTheName(string path, string title, int track, int? disc)
+    {
+        var r = FileNameParser.ParseAudio(path);
+
+        Assert.Equal(title, r.ParsedTitle);
+        Assert.Equal(track, r.AudioTrackNumber);
+        Assert.Equal(disc, r.AudioDiscNumber);
+    }
+
+    [Theory]
+    [InlineData(@"C:\Music\Artist\Album\99 Problems.mp3", "99 Problems")]
+    [InlineData(@"C:\Music\Artist\Album\Enter Sandman.mp3", "Enter Sandman")]
+    public void ParseAudio_LeavesPlainTitlesAlone(string path, string title)
+    {
+        var r = FileNameParser.ParseAudio(path);
+
+        Assert.Equal(title, r.ParsedTitle);
+        Assert.Null(r.AudioTrackNumber);
+    }
+}

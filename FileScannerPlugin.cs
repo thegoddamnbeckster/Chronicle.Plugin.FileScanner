@@ -266,8 +266,8 @@ public sealed class FileScannerPlugin : IFileScannerPlugin
                     scanned.AudioArtist          = tags.AudioArtist;
                     scanned.AudioAlbumArtist     = tags.AudioAlbumArtist;
                     scanned.AudioAlbum           = tags.AudioAlbum;
-                    scanned.AudioTrackNumber     = tags.AudioTrackNumber;
-                    scanned.AudioDiscNumber      = tags.AudioDiscNumber;
+                    scanned.AudioTrackNumber     = tags.AudioTrackNumber ?? scanned.AudioTrackNumber;   // tags win; the file name fills the gap
+                    scanned.AudioDiscNumber      = tags.AudioDiscNumber ?? scanned.AudioDiscNumber;
                     scanned.AudioYear            = tags.AudioYear;
                     scanned.AudioGenre           = tags.AudioGenre;
                     scanned.AudioGrouping        = tags.AudioGrouping;

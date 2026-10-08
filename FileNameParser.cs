@@ -174,13 +174,20 @@ internal static class FileNameParser
     public static ScannedFile ParseAudio(string filePath)
     {
         var stem = Path.GetFileNameWithoutExtension(filePath);
+
+        // "01 - Title", "1-02 Title", "Track 05 - Title": the number is the track number, not part of the title.
+        // Embedded tags (read afterwards) override these whenever the file has them.
+        var parts = TrackFileName.Parse(stem);
+        var hasTrack = parts.Track is not null;
         return new ScannedFile
         {
             FilePath        = filePath,
-            ParsedTitle     = CleanTitle(stem),
+            ParsedTitle     = CleanTitle(hasTrack ? parts.Title : stem),
             ParsedYear      = null,
             ConfidenceScore = 50,
             MediaTypeHint   = "music",
+            AudioTrackNumber = parts.Track,
+            AudioDiscNumber  = parts.Disc,
         };
     }
 
