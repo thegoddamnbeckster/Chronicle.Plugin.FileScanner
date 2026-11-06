@@ -15,7 +15,7 @@ public sealed class FileScannerPlugin : IFileScannerPlugin
 
     public string PluginId    => "chronicle.plugin.filescanner";
     public string Name        => "File Scanner";
-    public string Version     => "1.2.0";
+    public string Version     => System.Reflection.CustomAttributeExtensions.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(typeof(FileScannerPlugin).Assembly)?.InformationalVersion.Split('+')[0] ?? "1.3.1";
     public string Author      => "Chronicle";
     public string Description => "Scans local directories for media files. Reads embedded tags (ID3, Vorbis, MP4, MKV) and parses TV episode structure from filenames.";
 
